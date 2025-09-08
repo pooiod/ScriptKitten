@@ -76,11 +76,13 @@
 							frame.appendChild(confirmButton);
 
 							async function finishAndImportImageFromURL() {
-								var url9248 = promptInput.value || `https://picsum.photos/${window.stageWidth}/${window.stageHeight}?${Math.random()*100}`;
+								var url9248 = promptInput.value || `https://picsum.photos/${addons.Runtime.stageWidth}/${addons.runtime.stageHeight}?${Math.random()*100}`;
 								title.innerHTML = "Importing image";
 
+								console.log(url9248)
 								if (!url9248.startsWith("data") && !url.startsWith("/") && !addons.isCorsDomain(url9248)){
 									url9248 = "https://api.allorigins.win/raw?url=" + url9248;
+									console.log(url9248)
 								}
 
 								frame.innerHTML = `<div style="display:flex;justify-content:center;align-items:center;height:100%;"><div style="border:8px solid rgba(130, 130, 130, 0.07);border-top:8px solid #3498db;border-radius:50%;width:40px;height:40px;animation:spin 1s linear infinite;"></div></div><style>@keyframes spin{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}</style>`;

@@ -35,7 +35,6 @@
             line-height: 1.2;
         }
         .container {
-            /* max-width: 1100px; */
             margin: 0 auto;
             padding: 0 20px;
         }
@@ -162,6 +161,7 @@
             object-fit: cover;
             background-color: var(--subtle-gray);
             border: 2px solid var(--subtle-gray);
+            cursor: pointer;
         }
         .feature-item h3 {
             font-size: 1.5rem;
@@ -222,9 +222,32 @@
             color: #6c757d;
             font-weight: 700;
         }
+        .image-viewer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease;
+        }
+        .image-viewer img {
+            max-width: 90%;
+            max-height: 90%;
+            border-radius: 8px;
+        }
+        .image-viewer.show {
+            opacity: 1;
+            visibility: visible;
+        }
     </style>
 </head>
-<p hidden>75924</p>
 <body>
     <header>
         <div class="container">
@@ -264,11 +287,6 @@
                         <h3>Script Manager</h3>
                         <p>Load and run third-party scripts to modify the editor functionality and themes.</p>
                     </div>
-                    <!-- <div class="feature-item">
-                        <img src="https://www.vectorlogo.zone/logos/mit_scratch/mit_scratch-official.svg">
-                        <h3>Scratch extensions as addons</h3>
-                        <p>ScriptKitten lets you load scratch extensions as scripts that add no blocks.</p>
-                    </div> -->
                 </div>
             </div>
         </section>
@@ -278,8 +296,7 @@
                 <h2>Works With Your Favorite Editors</h2>
             </div>
             <div class="scroller-container" id="scroller-container">
-                <div class="compatibility-scroller" id="sites-container">
-                </div>
+                <div class="compatibility-scroller" id="sites-container"></div>
             </div>
         </section>
     </main>
@@ -288,31 +305,40 @@
         <p>A project by pooiod7</p>
     </footer>
 
+    <div class="image-viewer" id="image-viewer"><img id="viewer-img"></div>
+
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const userAgent = navigator.userAgent;
-            const isMobile = /Android|iPhone|iPad|iPod/i.test(userAgent);
-            const isFirefoxAndroid = /Android/i.test(userAgent) && /Firefox/i.test(userAgent);
-            const isOrioniOS = /Orion.*(iPhone|iPad|iPod)/i.test(userAgent);
+            const images = document.querySelectorAll('.feature-item img');
+            const viewer = document.getElementById('image-viewer');
+            const viewerImg = document.getElementById('viewer-img');
 
+            images.forEach(img => {
+                img.addEventListener('click', () => {
+                    viewerImg.src = img.src;
+                    viewer.classList.add('show');
+                });
+            });
+
+            viewer.addEventListener('click', () => {
+                viewer.classList.remove('show');
+            });
+
+            const userAgent = navigator.userAgent;
             const sitesContainer = document.getElementById('sites-container');
-            const installButton = document.getElementById('install-button');
             const scrollerContainer = document.getElementById('scroller-container');
 
             const createSiteChip = (url) => {
                 const urlObject = new URL(url);
                 const domain = urlObject.hostname;
                 let inferredTitle = domain.replace(/^www\./, '').split('.').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ').replace(/ (Com|Org|Net|Io|Js|Github|Page)$/, '');
-
                 const chip = document.createElement('a');
                 chip.href = urlObject.origin;
                 chip.className = 'site-chip';
                 chip.target = '_blank';
                 chip.rel = 'noopener noreferrer';
-
                 const icon = document.createElement('img');
                 const title = document.createElement('span');
-
                 if (domain === 'alpha.unsandboxed.org') {
                     icon.src = 'https://alpha.unsandboxed.org/favicon.ico';
                     icon.style.filter = 'invert(1)';
@@ -322,21 +348,13 @@
                 }
                 icon.alt = `${domain} favicon`;
                 icon.onerror = () => { icon.style.display = 'none'; };
-
                 if (inferredTitle.toLowerCase().startsWith('studio')) {
                     inferredTitle = inferredTitle.substring('studio'.length).trim();
                 }
-                if (domain.includes('github')) {
-                    inferredTitle = inferredTitle.replace(/github/ig, '').trim();
-                }
-                if (domain.includes('codeberg')) {
-                    inferredTitle = inferredTitle.replace(/codeberg/ig, '').trim();
-                }
-                if (domain.includes('js.org')) {
-                    inferredTitle = inferredTitle.replace(/js/ig, '').trim();
-                }
+                if (domain.includes('github')) inferredTitle = inferredTitle.replace(/github/ig, '').trim();
+                if (domain.includes('codeberg')) inferredTitle = inferredTitle.replace(/codeberg/ig, '').trim();
+                if (domain.includes('js.org')) inferredTitle = inferredTitle.replace(/js/ig, '').trim();
                 title.textContent = inferredTitle.replace(/\s+/g, ' ').trim();
-
                 chip.appendChild(icon);
                 chip.appendChild(title);
                 return chip;
@@ -347,25 +365,15 @@
                     const response = await fetch('manager.user.js');
                     if (!response.ok) throw new Error('Network response was not ok');
                     const scriptContent = await response.text();
-
                     const includeRegex = /\/\/\s*@include\s+(https?:\/\/[^\s]+)/g;
                     const matchRegex = /\/\/\s*@match\s+(https?:\/\/[^\s]+)/g;
                     const matches = [...scriptContent.matchAll(includeRegex), ...scriptContent.matchAll(matchRegex)];
-
-                    if (matches.length === 0) {
-                        sitesContainer.innerHTML = '<p>Could not load compatible sites list.</p>';
-                        return;
-                    }
-
+                    if (matches.length === 0) { sitesContainer.innerHTML = '<p>Could not load compatible sites list.</p>'; return; }
                     const urls = [...new Set(matches.map(match => match[1].trim()))];
                     const filteredUrls = urls.filter(url => !url.includes('mirror'));
-                    
                     const chips = filteredUrls.map(url => createSiteChip(url));
-                    
                     chips.forEach(chip => sitesContainer.appendChild(chip));
-                    
                     initInfiniteScroll(chips);
-
                 } catch (error) {
                     console.error('Failed to fetch and process userscript:', error);
                     sitesContainer.innerHTML = '<p>Error loading compatible sites list.</p>';
@@ -373,30 +381,22 @@
             };
 
             const initInfiniteScroll = (initialChips) => {
-                const scrollerWidth = sitesContainer.clientWidth;
                 const containerWidth = scrollerContainer.clientWidth;
                 let clones = 1;
-
                 while (sitesContainer.clientWidth < containerWidth * 2) {
-                    initialChips.forEach(chip => {
-                        sitesContainer.appendChild(chip.cloneNode(true));
-                    });
+                    initialChips.forEach(chip => sitesContainer.appendChild(chip.cloneNode(true)));
                     clones++;
                     if (clones > 10) break;
                 }
-
                 let isPaused = false;
                 let scrollPosition = 0;
                 const scrollSpeed = 0.2;
-
                 scrollerContainer.addEventListener('mouseenter', () => isPaused = true);
                 scrollerContainer.addEventListener('mouseleave', () => isPaused = false);
-                
                 function animateScroll() {
                     if (!isPaused) {
                         scrollPosition += scrollSpeed;
                         sitesContainer.style.transform = `translateX(-${scrollPosition}px)`;
-
                         const firstChip = sitesContainer.firstElementChild;
                         if (firstChip && scrollPosition >= firstChip.offsetWidth + 20) {
                             scrollPosition -= (firstChip.offsetWidth + 20);
@@ -405,74 +405,10 @@
                     }
                     requestAnimationFrame(animateScroll);
                 }
-                
                 animateScroll();
             };
 
             fetchAndDisplaySites();
-
-            if (/Android|iPhone|iPad|iPod/i.test(userAgent) &&
-                !(/Android/i.test(userAgent) && /Firefox/i.test(userAgent)) &&
-                !/Orion.*(iPhone|iPad|iPod)/i.test(userAgent)
-            ) {
-                const notificationContainer = document.createElement('div');
-                notificationContainer.style.position = 'fixed';
-                notificationContainer.style.bottom = '2rem';
-                notificationContainer.style.left = '50%';
-                notificationContainer.style.transform = 'translate(-50%, 150%)';
-                notificationContainer.style.maxWidth = '600px';
-                notificationContainer.style.width = 'calc(100% - 2rem)';
-                notificationContainer.style.padding = '1.25rem 2rem';
-                notificationContainer.style.backgroundColor = '#FFFFFF';
-                notificationContainer.style.border = '2px solid #E9ECEF';
-                notificationContainer.style.color = '#1F2937';
-                notificationContainer.style.borderRadius = '0.75rem';
-                notificationContainer.style.textAlign = 'left';
-                notificationContainer.style.zIndex = '9999';
-                notificationContainer.style.fontFamily = 'Inter, sans-serif';
-                notificationContainer.style.cursor = 'pointer';
-                notificationContainer.style.opacity = '0';
-                notificationContainer.style.transition = 'transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.5s ease-in-out';
-                notificationContainer.style.display = 'flex';
-                notificationContainer.style.alignItems = 'center';
-                notificationContainer.style.gap = '1.5rem';
-                
-                const title = document.createElement('h2');
-                title.textContent = 'Desktop Required';
-                title.style.fontSize = '1.125rem';
-                title.style.fontWeight = '600';
-                title.style.margin = '0';
-
-                const paragraph = document.createElement('p');
-                paragraph.textContent = 'This project requires a desktop browser that supports extensions.';
-                paragraph.style.fontSize = '0.875rem';
-                paragraph.style.margin = '0';
-                
-                const textContent = document.createElement('div');
-                textContent.style.display = 'flex';
-                textContent.style.flexDirection = 'column';
-                textContent.style.gap = '0.25rem';
-                textContent.appendChild(title);
-                textContent.appendChild(paragraph);
-
-                notificationContainer.appendChild(textContent);
-                document.body.appendChild(notificationContainer);
-
-                setTimeout(() => {
-                    notificationContainer.style.transform = 'translate(-50%, 0)';
-                    notificationContainer.style.opacity = '1';
-                }, 100);
-
-                const hideNotification = () => {
-                    notificationContainer.style.transform = 'translate(-50%, 150%)';
-                    notificationContainer.style.opacity = '0';
-                    notificationContainer.addEventListener('transitionend', () => notificationContainer.remove(), { once: true });
-                };
-                
-                setTimeout(hideNotification, 5000);
-
-                notificationContainer.addEventListener('click', hideNotification);
-            }
         });
     </script>
 </body>

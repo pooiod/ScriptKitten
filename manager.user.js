@@ -257,6 +257,8 @@ if (InAddonManager) {
             return [
 				"raw.githubusercontent.com",
 				"api.allorigins.win",
+				"p7scratchextensions.pages.dev",
+				"pooiod7.pages.dev",
 				window.location.host
 			].includes(domain);
         },
